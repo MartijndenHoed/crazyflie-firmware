@@ -34,6 +34,8 @@
 #include "FreeRTOS.h"
 #include "num.h"
 #include "position_controller.h"
+#include "flip.c"
+#include "autoconf.h"
 
 #define MIN_THRUST  1000
 #define MAX_THRUST  60000
@@ -47,6 +49,7 @@ struct CommanderCrtpLegacyValues
   float pitch;      // deg
   float yaw;        // deg
   uint16_t thrust;
+  float flip;
 } __attribute__((packed));
 
 /**
@@ -79,6 +82,11 @@ static bool altHoldMode = false;
 static bool posHoldMode = false;
 static bool posSetMode = false;
 static bool modeSet = false;
+static bool flipMode = false;
+
+#if CONFIG_DECK_FLAPPER_FLIP_ENABLE
+static bool flipSwitchPrev = true;
+#endif
 
 /**
  * Rotate Yaw so that the Crazyflie will change what is considered front.
@@ -117,110 +125,138 @@ static void yawModeUpdate(setpoint_t *setpoint)
   }
 }
 
+
+
+
 void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
 {
   struct CommanderCrtpLegacyValues *values = (struct CommanderCrtpLegacyValues*)pk->data;
 
-  if (commanderGetActivePriority() == COMMANDER_PRIORITY_DISABLE) {
-    thrustLocked = true;
-  }
-  if (values->thrust == 0) {
-    thrustLocked = false;
-  }
 
-  // Thrust
-  uint16_t rawThrust = values->thrust;
+#if CONFIG_DECK_FLAPPER_FLIP_ENABLE
 
-  if (thrustLocked || (rawThrust < MIN_THRUST)) {
-    setpoint->thrust = 0;
-  } else {
-    setpoint->thrust = fminf(rawThrust, MAX_THRUST);
-  }
+	if(values->flip>0.5f && !flipSwitchPrev)
+	{
+		flipMode = true;
+		flipSwitchPrev = true;
+	}
+	if(values->flip<0.5f)
+	{
+		flipSwitchPrev = false;
+	}
+#endif
+	if(flipMode)
+	{
+		flipMode = !runFlip(setpoint);
+	}
 
-  if (altHoldMode) {
-    if (!modeSet) {             //Reset filter and PID values on first initiation of assist mode to prevent sudden reactions.
-      modeSet = true;
-      positionControllerResetAllPID();
-      positionControllerResetAllfilters();
-    }
-    setpoint->thrust = 0;
-    setpoint->mode.z = modeVelocity;
 
-    setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
-  } else {
-    setpoint->mode.z = modeDisable;
-    modeSet = false;
-  }
 
-  // roll/pitch
-  if (posHoldMode) {
-    setpoint->mode.x = modeVelocity;
-    setpoint->mode.y = modeVelocity;
-    setpoint->mode.roll = modeDisable;
-    setpoint->mode.pitch = modeDisable;
+	if(!flipMode)
+	{
+	  if (commanderGetActivePriority() == COMMANDER_PRIORITY_DISABLE) {
+	    thrustLocked = true;
+	  }
+	  if (values->thrust == 0) {
+	    thrustLocked = false;
+	  }
 
-    setpoint->velocity.x = values->pitch/30.0f;
-    setpoint->velocity.y = values->roll/30.0f;
-    setpoint->attitude.roll  = 0;
-    setpoint->attitude.pitch = 0;
-  } else if (posSetMode && values->thrust != 0) {
-    setpoint->mode.x = modeAbs;
-    setpoint->mode.y = modeAbs;
-    setpoint->mode.z = modeAbs;
-    setpoint->mode.roll = modeDisable;
-    setpoint->mode.pitch = modeDisable;
-    setpoint->mode.yaw = modeAbs;
+	  // Thrust
+	  uint16_t rawThrust = values->thrust;
 
-    setpoint->position.x = -values->pitch;
-    setpoint->position.y = values->roll;
-    setpoint->position.z = values->thrust/1000.0f;
+	  if (thrustLocked || (rawThrust < MIN_THRUST)) {
+	    setpoint->thrust = 0;
+	  }
+	else
+	{
+	setpoint->thrust = fminf(rawThrust, MAX_THRUST);
+	}
 
-    setpoint->attitude.roll  = 0;
-    setpoint->attitude.pitch = 0;
-    setpoint->attitude.yaw = values->yaw;
-    setpoint->thrust = 0;
-  } else {
-    setpoint->mode.x = modeDisable;
-    setpoint->mode.y = modeDisable;
+	  if (altHoldMode) {
+	    if (!modeSet) {             //Reset filter and PID values on first initiation of assist mode to prevent sudden reactions.
+	      modeSet = true;
+	      positionControllerResetAllPID();
+	      positionControllerResetAllfilters();
+	    }
+	    setpoint->thrust = 0;
+	    setpoint->mode.z = modeVelocity;
 
-    if (stabilizationModeRoll == RATE) {
-      setpoint->mode.roll = modeVelocity;
-      setpoint->attitudeRate.roll = values->roll;
-      setpoint->attitude.roll = 0;
-    } else {
-      setpoint->mode.roll = modeAbs;
-      setpoint->attitudeRate.roll = 0;
-      setpoint->attitude.roll = values->roll;
-    }
+	    setpoint->velocity.z = ((float) rawThrust - 32767.f) / 32767.f;
+	  } else {
+	    setpoint->mode.z = modeDisable;
+	    modeSet = false;
+	  }
 
-    if (stabilizationModePitch == RATE) {
-      setpoint->mode.pitch = modeVelocity;
-      setpoint->attitudeRate.pitch = values->pitch;
-      setpoint->attitude.pitch = 0;
-    } else {
-      setpoint->mode.pitch = modeAbs;
-      setpoint->attitudeRate.pitch = 0;
-      setpoint->attitude.pitch = values->pitch;
-    }
+	  // roll/pitch
+	  if (posHoldMode) {
+	    setpoint->mode.x = modeVelocity;
+	    setpoint->mode.y = modeVelocity;
+	    setpoint->mode.roll = modeDisable;
+	    setpoint->mode.pitch = modeDisable;
 
-    setpoint->velocity.x = 0;
-    setpoint->velocity.y = 0;
-  }
+	    setpoint->velocity.x = values->pitch/30.0f;
+	    setpoint->velocity.y = values->roll/30.0f;
+	    setpoint->attitude.roll  = 0;
+	    setpoint->attitude.pitch = 0;
+	  } else if (posSetMode && values->thrust != 0) {
+	    setpoint->mode.x = modeAbs;
+	    setpoint->mode.y = modeAbs;
+	    setpoint->mode.z = modeAbs;
+	    setpoint->mode.roll = modeDisable;
+	    setpoint->mode.pitch = modeDisable;
+	    setpoint->mode.yaw = modeAbs;
 
-  // Yaw
-  if (!posSetMode) {
-    if (stabilizationModeYaw == RATE) {
-      // legacy rate input is inverted
-      setpoint->attitudeRate.yaw = -values->yaw;
-      yawModeUpdate(setpoint);
+	    setpoint->position.x = -values->pitch;
+	    setpoint->position.y = values->roll;
+	    setpoint->position.z = values->thrust/1000.0f;
 
-      setpoint->mode.yaw = modeVelocity;
-    } else {
-      setpoint->mode.yaw = modeAbs;
-      setpoint->attitudeRate.yaw = 0;
-      setpoint->attitude.yaw = values->yaw;
-    }
-  }
+	    setpoint->attitude.roll  = 0;
+	    setpoint->attitude.pitch = 0;
+	    setpoint->attitude.yaw = values->yaw;
+	    setpoint->thrust = 0;
+	  } else {
+	    setpoint->mode.x = modeDisable;
+	    setpoint->mode.y = modeDisable;
+
+	    if (stabilizationModeRoll == RATE) {
+	      setpoint->mode.roll = modeVelocity;
+	      setpoint->attitudeRate.roll = values->roll;
+	      setpoint->attitude.roll = 0;
+	    } else {
+	      setpoint->mode.roll = modeAbs;
+	      setpoint->attitudeRate.roll = 0;
+	      setpoint->attitude.roll = values->roll;
+	    }
+
+	    if (stabilizationModePitch == RATE) {
+	      setpoint->mode.pitch = modeVelocity;
+	      setpoint->attitudeRate.pitch = values->pitch;
+	      setpoint->attitude.pitch = 0;
+	    } else {
+	      setpoint->mode.pitch = modeAbs;
+	      setpoint->attitudeRate.pitch = 0;
+	      setpoint->attitude.pitch = values->pitch;
+	    }
+
+	    setpoint->velocity.x = 0;
+	    setpoint->velocity.y = 0;
+	  }
+
+	  // Yaw
+	  if (!posSetMode) {
+	    if (stabilizationModeYaw == RATE) {
+	      // legacy rate input is inverted
+	      setpoint->attitudeRate.yaw = -values->yaw;
+	      yawModeUpdate(setpoint);
+
+	      setpoint->mode.yaw = modeVelocity;
+	    } else {
+	      setpoint->mode.yaw = modeAbs;
+	      setpoint->attitudeRate.yaw = 0;
+	      setpoint->attitude.yaw = values->yaw;
+	    }
+	  }
+	}
 }
 
 /**

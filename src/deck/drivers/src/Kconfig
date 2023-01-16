@@ -55,7 +55,7 @@ endmenu
 
 config DECK_BIGQUAD
     bool "Support the BigQuad deck"
-    default n
+    default y
     help
         With the BigQuad deck you can transform your Crazyflie 2.X to a
         bigger quad by connecting external Electronic speed controllers
@@ -174,6 +174,13 @@ config DECK_FLAPPER_EXTRX_ENABLE
     depends on DECK_FLAPPER
     help
         Enables external receiver on PA3 (Flapper Nimble+ PCB).
+
+config DECK_FLAPPER_FLIP_ENABLE
+    bool "Enable flipping"
+    default n
+    depends on DECK_FLAPPER
+    help
+        Enables flip functionality, activated by channel 4.
 
 config DECK_FLOW
     bool "Support the Flow (v1 and v2) deck"
