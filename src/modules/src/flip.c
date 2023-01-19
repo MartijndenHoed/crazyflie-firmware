@@ -167,7 +167,7 @@ bool runFlip(setpoint_t *setpoint,int flip_type) //the runflip function is execu
 			
 			flip_timer++;
 			
-			if(flip_timer>90)
+			if(flip_timer>80)
 			{
 				flip_timer = 0;
 				flip_state = 12;
