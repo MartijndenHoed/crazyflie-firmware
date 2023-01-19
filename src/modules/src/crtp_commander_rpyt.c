@@ -50,6 +50,8 @@ struct CommanderCrtpLegacyValues
   float yaw;        // deg
   uint16_t thrust;
   float flip;
+	float flip_type;
+	float fly_mode;
 } __attribute__((packed));
 
 /**
@@ -83,6 +85,7 @@ static bool posHoldMode = false;
 static bool posSetMode = false;
 static bool modeSet = false;
 static bool flipMode = false;
+static int flip_type = 0;
 
 #if CONFIG_DECK_FLAPPER_FLIP_ENABLE
 static bool flipSwitchPrev = true;
@@ -134,20 +137,42 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
 
 
 #if CONFIG_DECK_FLAPPER_FLIP_ENABLE
-
-	if(values->flip>0.5f && !flipSwitchPrev)
+	if(values->fly_mode>0.5f)
 	{
-		flipMode = true;
-		flipSwitchPrev = true;
+		if(values->flip>0.5f && !flipSwitchPrev)
+		{
+			flipMode = true;
+			flipSwitchPrev = true;
+		}
+		if(values->flip<0.5f)
+		{
+			flipSwitchPrev = false;
+		}
 	}
-	if(values->flip<0.5f)
+	else
 	{
-		flipSwitchPrev = false;
+		flipSwitchPrev = true;
 	}
 #endif
 	if(flipMode)
 	{
-		flipMode = !runFlip(setpoint);
+		if(values->flip_type < -0.5f)
+		{
+			flip_type = 0;
+		}
+		if(-0.5f<values->flip_type && values->flip_type<0.5f)
+		{
+			flip_type = 1;
+		}
+		if(values->flip_type > 0.5f)
+		{
+			flip_type = 2;
+		}
+		
+		
+		
+		
+		flipMode = !runFlip(setpoint,flip_type);
 	}
 
 

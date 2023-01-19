@@ -54,7 +54,7 @@ struct flapperConfig_s {
 };
 
 struct flapperConfig_s flapperConfig = {
-  .pitchServoNeutral = 50,
+  .pitchServoNeutral = 45,
   .yawServoNeutral = 50,
   .rollBias = 0,
   .maxThrust = 60000,

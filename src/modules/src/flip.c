@@ -17,12 +17,32 @@ static int flip_state = 0;
 
 
 //runflip returns false while it is running and true when done
-bool runFlip(setpoint_t *setpoint) //the runflip function is executed at 100 Hertz
+bool runFlip(setpoint_t *setpoint,int flip_type) //the runflip function is executed at 100 Hertz
 {
+	if(flip_timer==0 && flip_state==0) //flip init check
+	{
+		
+		if(flip_type==0) //enable correct flip type
+		{
+			flip_state = 0;
+		}
+		
+		if(flip_type==1)
+		{
+			flip_state = 0;
+		}
+		
+		if(flip_type==2)
+		{
+			flip_state = 10;
+		}
+		
+		
+	}
 	
 	switch(flip_state)
 	{
-		case 0: //lift up
+		case 0: //roll flip, lift up
 			setpoint->thrust = 55000;
 			
 			setpoint->mode.pitch = modeAbs;
@@ -103,7 +123,86 @@ bool runFlip(setpoint_t *setpoint) //the runflip function is executed at 100 Her
 
 		break;
 
+		case 10: //pitch flip, lift up
+			setpoint->thrust = 55000;
+			
+			setpoint->mode.pitch = modeAbs;
+			setpoint->attitudeRate.pitch = 0;
+			setpoint->attitude.pitch = 0;
+			
+			setpoint->mode.roll = modeAbs;
+			setpoint->attitudeRate.roll = 0;
+			setpoint->attitude.roll = 0;
+			
+			setpoint->mode.yaw = modeVelocity;
+			setpoint->attitude.yaw = 0;
+			
+			
+			flip_timer++;
+			
+			if(flip_timer>60)
+			{
+				flip_timer = 0;
+				flip_state = 11;
+			}
 
+		break;
+
+
+		case 11: //set pitch rate
+			setpoint->thrust = 40000;
+			
+			setpoint->thrust = 40000;
+			
+			setpoint->mode.pitch = modeVelocity;
+			setpoint->attitudeRate.pitch = 900;
+			setpoint->attitude.pitch = 0;
+			
+			setpoint->mode.roll = modeVelocity;
+			setpoint->attitudeRate.roll = 0;
+			setpoint->attitude.roll = 0;
+			
+			setpoint->mode.yaw = modeVelocity;
+			setpoint->attitude.yaw = 0;
+			
+			flip_timer++;
+			
+			if(flip_timer>90)
+			{
+				flip_timer = 0;
+				flip_state = 12;
+			}
+
+
+
+		break;
+
+
+		case 12: //stabilize
+			setpoint->thrust = 55000;
+			
+			setpoint->mode.pitch = modeAbs;
+			setpoint->attitudeRate.pitch = 0;
+			setpoint->attitude.pitch = 0;
+			
+			setpoint->mode.roll = modeAbs;
+			setpoint->attitudeRate.roll = 0;
+			setpoint->attitude.roll = 0;
+			
+			setpoint->mode.yaw = modeVelocity;
+			setpoint->attitude.yaw = 0;
+			
+			flip_timer++;
+			
+			if(flip_timer>10)
+			{
+				flip_timer = 0;
+				flip_state = 100;
+			}
+
+
+
+		break;
 
 
 
