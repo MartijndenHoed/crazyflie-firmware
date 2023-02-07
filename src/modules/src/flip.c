@@ -29,7 +29,7 @@ bool runFlip(setpoint_t *setpoint,int flip_type) //the runflip function is execu
 		
 		if(flip_type==1)
 		{
-			flip_state = 0;
+			flip_state = 20;
 		}
 		
 		if(flip_type==2)
@@ -42,7 +42,9 @@ bool runFlip(setpoint_t *setpoint,int flip_type) //the runflip function is execu
 	
 	switch(flip_state)
 	{
-		case 0: //roll flip, lift up
+			
+			//roll flip
+		case 0: // lift up
 			setpoint->thrust = 55000;
 			
 			setpoint->mode.pitch = modeAbs;
@@ -123,7 +125,9 @@ bool runFlip(setpoint_t *setpoint,int flip_type) //the runflip function is execu
 
 		break;
 
-		case 10: //pitch flip, lift up
+			
+			//pitch flip
+		case 10: //lift up
 			setpoint->thrust = 55000;
 			
 			setpoint->mode.pitch = modeAbs;
@@ -162,12 +166,12 @@ bool runFlip(setpoint_t *setpoint,int flip_type) //the runflip function is execu
 			setpoint->attitudeRate.roll = 0;
 			setpoint->attitude.roll = 0;
 			
-			setpoint->mode.yaw = modeVelocity;
+			setpoint->mode.yaw = modeDisable;
 			setpoint->attitude.yaw = 0;
 			
 			flip_timer++;
 			
-			if(flip_timer>80)
+			if(flip_timer>65)
 			{
 				flip_timer = 0;
 				flip_state = 12;
@@ -194,7 +198,7 @@ bool runFlip(setpoint_t *setpoint,int flip_type) //the runflip function is execu
 			
 			flip_timer++;
 			
-			if(flip_timer>10)
+			if(flip_timer>20)
 			{
 				flip_timer = 0;
 				flip_state = 100;
@@ -205,16 +209,111 @@ bool runFlip(setpoint_t *setpoint,int flip_type) //the runflip function is execu
 		break;
 
 
+	
+	//sharp turn
+	case 20: //accelerate forward
+			setpoint->thrust = 35000;
+			
+			setpoint->mode.pitch = modeAbs;
+			setpoint->attitudeRate.pitch = 0;
+			setpoint->attitude.pitch = -50;
+			
+			setpoint->mode.roll = modeAbs;
+			setpoint->attitudeRate.roll = 0;
+			setpoint->attitude.roll = 0;
+			
+			setpoint->mode.yaw = modeVelocity;
+			setpoint->attitude.yaw = 0;
+			
+			
+			flip_timer++;
+			
+			if(flip_timer>40)
+			{
+				flip_timer = 0;
+				flip_state = 21;
+			}
 
-
+		break;
+			
+			
+		case 21: //roll pitch sideways
+			setpoint->thrust = 38000;
+			
+			setpoint->mode.pitch = modeVelocity;
+			setpoint->attitudeRate.pitch = -450;
+			setpoint->attitude.pitch = 0;
+			
+			setpoint->mode.roll = modeVelocity;
+			setpoint->attitudeRate.roll = 400;
+			setpoint->attitude.roll = 0;
+			
+			setpoint->mode.yaw = modeDisable;
+			setpoint->attitude.yaw = 0;
+			
+			
+			flip_timer++;
+			
+			if(flip_timer>30)
+			{
+				flip_timer = 0;
+				flip_state = 23;
+			}
+			break;
+			
+			
+		case 22: //stabilize the velocity, forward flight
+			setpoint->thrust = 38000;
+			
+			setpoint->mode.pitch = modeVelocity;
+			setpoint->attitudeRate.pitch = 0;
+			setpoint->attitude.pitch = 0;
+			
+			setpoint->mode.roll = modeVelocity;
+			setpoint->attitudeRate.roll = 0;
+			setpoint->attitude.roll = 0;
+			
+			setpoint->mode.yaw = modeVelocity;
+			setpoint->attitude.yaw = 0;
+			
+			flip_timer++;
+			
+			if(flip_timer>20)
+			{
+				flip_timer = 0;
+				flip_state = 23;
+			}
+			break;
+					case 23: //stabilize, forward flight
+			setpoint->thrust = 37000;
+			
+			setpoint->mode.pitch = modeAbs;
+			setpoint->attitudeRate.pitch = 0;
+			setpoint->attitude.pitch = -30;
+			
+			setpoint->mode.roll = modeAbs;
+			setpoint->attitudeRate.roll = 0;
+			setpoint->attitude.roll = 0;
+			
+			setpoint->mode.yaw = modeVelocity;
+			setpoint->attitude.yaw = 0;
+			
+			flip_timer++;
+			
+			if(flip_timer>30)
+			{
+				flip_timer = 0;
+				flip_state = 100;
+			}
+			break;
+			
 	}
-
 
 	if(flip_state!=100)
 	{
 		return false;
 	}
-	else
+	else //end of maneouvre
 	{
 		flip_timer = 0;
 		flip_state = 0;
