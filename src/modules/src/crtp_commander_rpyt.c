@@ -139,7 +139,7 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
 #if CONFIG_DECK_FLAPPER_FLIP_ENABLE
 	if(values->fly_mode>0.5f)
 	{
-		if(values->flip>0.5f && !flipSwitchPrev)
+		if(values->flip>0.5f && !flipSwitchPrev && (values->thrust > MIN_THRUST))
 		{
 			flipMode = true;
 			flipSwitchPrev = true;

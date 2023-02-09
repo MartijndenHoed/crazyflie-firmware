@@ -21,15 +21,25 @@ bool runFlip(setpoint_t *setpoint,int flip_type) //the runflip function is execu
 {
 	if(flip_timer==0 && flip_state==0) //flip init check
 	{
-		
+		//flip_state:
+		//0: roll flip
+		//10: pitch flip
+		//20: evasive turn
+
+		//flip_type:
+		//0: switch down
+		//1: switch middle
+		//2: switch up
+
+
 		if(flip_type==0) //enable correct flip type
 		{
-			flip_state = 0;
+			flip_state = 20;
 		}
 		
 		if(flip_type==1)
 		{
-			flip_state = 20;
+			flip_state = 0;
 		}
 		
 		if(flip_type==2)
